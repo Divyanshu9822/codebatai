@@ -19,6 +19,9 @@
     "probot": "^13.0.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.4.0",
+    "eslint": "^9.4.0",
+    "globals": "^15.3.0",
     "nock": "^14.0.0-beta.5",
     "nodemon": "^3.1.2",
     "smee-client": "^2.0.0"
