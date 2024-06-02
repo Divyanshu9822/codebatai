@@ -10,7 +10,26 @@ export default (app) => {
     const issueComment = context.issue({
       body: "Thanks for opening this issue!",
     });
-    return context.octokit.issues.createComment(issueComment);
+
+    await context.octokit.issues.createComment(issueComment);
+    app.log.info("Comment added successfully.");
+
+    const issueNumber = context.payload.issue.number;
+    const repoOwner = context.payload.repository.owner.login;
+    const repoName = context.payload.repository.name;
+
+    app.log.info(
+      `Adding label to issue #${issueNumber} in repo ${repoOwner}/${repoName}`
+    );
+
+    await context.octokit.issues.addLabels({
+      owner: repoOwner,
+      repo: repoName,
+      issue_number: issueNumber,
+      labels: ["new issue"],
+    });
+
+    app.log.info("Label added successfully.");
   });
 
   // For more information on building apps:
