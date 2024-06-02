@@ -12,7 +12,7 @@
     "probot-app"
   ],
   "scripts": {
-    "start": "probot run ./index.js",
+    "start": "nodemon --exec 'probot run ./index.js'",
     "test": "node --test"
   },
   "dependencies": {
@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "nock": "^14.0.0-beta.5",
+    "nodemon": "^3.1.2",
     "smee-client": "^2.0.0"
   },
   "engines": {
