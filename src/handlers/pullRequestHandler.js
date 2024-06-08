@@ -5,6 +5,10 @@ export const handlePullRequestEvents = async (context) => {
   const repoOwner = context.payload.repository.owner.login;
   const repoName = context.payload.repository.name;
 
+  const prDetails = context.payload.pull_request;
+  const prTitle = prDetails.title;
+  let prDescription = prDetails.body;
+
   const filesResponse = await context.octokit.rest.pulls.listFiles({
     owner: repoOwner,
     repo: repoName,
@@ -12,9 +16,7 @@ export const handlePullRequestEvents = async (context) => {
   });
 
   const files = filesResponse.data;
-
   const reviewComments = [];
-
   const changesSummaryMap = {};
 
   for (const file of files) {
@@ -32,7 +34,7 @@ export const handlePullRequestEvents = async (context) => {
         ${patch}
         \`\`\`
 
-        Please provide the direct response in the following format only without any introductory phrases. Also ensure that JSON is valid and don't use backticks in the response JSON keys and values.:
+        Please provide the direct response in the following format only without any introductory phrases. Also ensure that JSON is valid and don't use backticks in the response JSON keys and values.
 
         OutputStructure: 
         \`\`\`
@@ -75,9 +77,9 @@ export const handlePullRequestEvents = async (context) => {
     Provide a precise walkthrough of all the changes made in the pull request based on the given JSON data containing files and their corresponding changes summaries.
 
     Data:
-      \`\`\`
-      ${JSON.stringify(changesSummaryMap, null, 2)}
-      \`\`\`
+    \`\`\`
+    ${JSON.stringify(changesSummaryMap, null, 2)}
+    \`\`\`
   `;
 
   const walkthroughMessages = [
@@ -94,13 +96,46 @@ export const handlePullRequestEvents = async (context) => {
 
   const walkthroughAIReview = await generateChatCompletion(walkthroughMessages);
 
-  const walkthroughAndSumarryCommentContent = `
+  const categorizedSummaryPrompt = `
+    Categorize and summarize the changes in the pull request into the following aspects:
+    - Bug Fixes
+    - New Features
+    - Enhancements
+    - Refactorings
+    - Chores
+    - Documentation Updates
+    - Configuration Changes
+    - Dependency Updates
+
+    Provide a short summary under each category (if applicable otherwise don't have that aspect in reponse) based on the given JSON data of changes.
+
+    Data:
+    \`\`\`
+    ${JSON.stringify(changesSummaryMap, null, 2)}
+    \`\`\`
+  `;
+
+  const categorizedSummaryMessages = [
+    {
+      role: 'system',
+      content:
+        'You are a PR changes analyzer capable of categorizing and summarizing changes into various aspects such as Bug Fixes, New Features, Enhancements, etc. Provide a categorized summary without any introductory phrases.',
+    },
+    {
+      role: 'user',
+      content: categorizedSummaryPrompt,
+    },
+  ];
+
+  const categorizedSummaryAIReview = await generateChatCompletion(categorizedSummaryMessages);
+
+  const walkthroughAndSummaryCommentContent = `
   ## Walkthrough
 
   ${walkthroughAIReview}
 
   ## Changes
-  
+
   | Files/Directories | Change Summary                                              |
   |----------------|-------------------------------------------------------------|
   ${Object.entries(changesSummaryMap)
@@ -112,7 +147,7 @@ export const handlePullRequestEvents = async (context) => {
     owner: repoOwner,
     repo: repoName,
     issue_number: prNumber,
-    body: walkthroughAndSumarryCommentContent,
+    body: walkthroughAndSummaryCommentContent,
   });
 
   await context.octokit.rest.pulls.createReview({
@@ -122,6 +157,24 @@ export const handlePullRequestEvents = async (context) => {
     body: `**Actionable comments posted: ${reviewComments.length}**`,
     event: 'REQUEST_CHANGES',
     comments: reviewComments,
+  });
+
+  let updatedDescription = prDescription || '';
+  if (categorizedSummaryAIReview) {
+    updatedDescription += `
+
+## Summary by CodeBat AI
+
+${categorizedSummaryAIReview}
+    `;
+  }
+
+  await context.octokit.rest.pulls.update({
+    owner: repoOwner,
+    repo: repoName,
+    pull_number: prNumber,
+    body: updatedDescription,
+    title: prTitle,
   });
 };
 
