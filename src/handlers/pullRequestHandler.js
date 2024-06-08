@@ -32,7 +32,7 @@ export const handlePullRequestEvents = async (context) => {
         ${patch}
         \`\`\`
 
-        Please provide the response in the following format only without any other messages or comments like "Here my review" or "I have completed the task" etc.:
+        Please provide the direct response in the following format only without any introductory phrases. Also ensure that JSON is valid and don't use backticks in the response JSON keys and values.:
 
         OutputStructure: 
         \`\`\`
@@ -71,10 +71,37 @@ export const handlePullRequestEvents = async (context) => {
     }
   }
 
-  const changesSummaryTable = `
-  ## Changes Summary
+  const walkthroughPrompt = `
+    Provide a precise walkthrough of all the changes made in the pull request based on the given JSON data containing files and their corresponding changes summaries.
+
+    Data:
+      \`\`\`
+      ${JSON.stringify(changesSummaryMap, null, 2)}
+      \`\`\`
+  `;
+
+  const walkthroughMessages = [
+    {
+      role: 'system',
+      content:
+        'You are a PR changes analyzer capable of providing a walkthrough of changes made in a pull request. Provide a walkthrough of the changes directly without any introductory phrases.',
+    },
+    {
+      role: 'user',
+      content: walkthroughPrompt,
+    },
+  ];
+
+  const walkthroughAIReview = await generateChatCompletion(walkthroughMessages);
+
+  const walkthroughAndSumarryCommentContent = `
+  ## Walkthrough
+
+  ${walkthroughAIReview}
+
+  ## Changes
   
-  | File/Directory | Change Summary                                              |
+  | Files/Directories | Change Summary                                              |
   |----------------|-------------------------------------------------------------|
   ${Object.entries(changesSummaryMap)
     .map(([filename, summaries]) => summaries.map((summary) => `| \`${filename}\` | ${summary} |`).join('\n'))
@@ -85,7 +112,7 @@ export const handlePullRequestEvents = async (context) => {
     owner: repoOwner,
     repo: repoName,
     issue_number: prNumber,
-    body: changesSummaryTable,
+    body: walkthroughAndSumarryCommentContent,
   });
 
   await context.octokit.rest.pulls.createReview({
