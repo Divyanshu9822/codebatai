@@ -1,6 +1,6 @@
-import { generateChatCompletion } from '../ai/generateChatCompletion.js';
+import { generateChatCompletion } from '../../ai/generateChatCompletion.js';
 
-export const handlePullRequestEvents = async (context) => {
+const pullReviewer = async (context) => {
   const prNumber = context.payload.pull_request.number;
   const repoOwner = context.payload.repository.owner.login;
   const repoName = context.payload.repository.name;
@@ -297,3 +297,5 @@ function extractFieldsWithTags(text, tags, delimiter = '\n\n') {
 
   return result;
 }
+
+export default pullReviewer;
