@@ -9,6 +9,38 @@ export const handlePullRequestEvents = async (context) => {
   const prTitle = prDetails.title;
   let prDescription = prDetails.body;
 
+  const reviewComments = [];
+  const commitsAndChangesSummaryMap = {};
+  const commitMessagesMap = {};
+
+  const commitsResponse = await context.octokit.rest.pulls.listCommits({
+    owner: repoOwner,
+    repo: repoName,
+    pull_number: prNumber,
+  });
+
+  const commits = commitsResponse.data;
+
+  for (const commit of commits) {
+    const commitMessage = commit.commit.message;
+
+    const commitUrl = commit.url;
+    const commitDetailsResponse = await context.octokit.request(`GET ${commitUrl}`);
+    const commitFiles = commitDetailsResponse.data.files;
+
+    for (const file of commitFiles) {
+      const filename = file.filename;
+
+      if (!commitMessagesMap[filename]) {
+        commitMessagesMap[filename] = [];
+      }
+
+      commitMessagesMap[filename].push(commitMessage);
+    }
+  }
+
+  console.log('Commit Messages Map:', commitMessagesMap);
+
   const filesResponse = await context.octokit.rest.pulls.listFiles({
     owner: repoOwner,
     repo: repoName,
@@ -16,32 +48,30 @@ export const handlePullRequestEvents = async (context) => {
   });
 
   const files = filesResponse.data;
-  const reviewComments = [];
-  const changesSummaryMap = {};
 
   for (const file of files) {
     const patches = file.patch.split('diff --git');
 
     for (const patch of patches) {
       const reviewPrompt = `
-    Review the changes in the file '${file.filename}' and provide constructive feedback. Analyze the code quality, highlight potential issues, and suggest improvements. Separate the feedback into two sections:
-
-    1. <reviewBody>: Offer a detailed review of code changes and suggest better code replacements for particular codeblocks.
-    2. <changesSummary>: Present a short and concise descriptive summary of changes made by analyzing the code patch provided below without any suggestions for improvement.
-
-    Changes:
-    \`\`\`
-    ${patch}
-    \`\`\`
-
-    Please provide the direct response in the following format only without any introductory phrases. Use the custom tags for each section to ensure the response is easy to parse.
-
-    OutputStructure: 
-    \`\`\`
-    <reviewBody>Your detailed review here</reviewBody>
-    <changesSummary>Your short summary for changes done here</changesSummary>
-    \`\`\`
-  `;
+        Review the changes in the file '${file.filename}' and provide constructive feedback. Analyze the code quality, highlight potential issues, and suggest improvements. Separate the feedback into two sections:
+  
+        1. <reviewBody>: Offer a detailed review of code changes and suggest better code replacements for particular codeblocks.
+        2. <changesSummary>: Present a short and concise descriptive summary of changes made by analyzing the code patch provided below without any suggestions for improvement.
+  
+        Changes:
+        \`\`\`
+        ${patch}
+        \`\`\`
+  
+        Please provide the direct response in the following format only without any introductory phrases. Use the custom tags for each section to ensure the response is easy to parse.
+  
+        OutputStructure: 
+        \`\`\`
+        <reviewBody>Your detailed review here</reviewBody>
+        <changesSummary>Your short summary for changes done here</changesSummary>
+        \`\`\`
+      `;
 
       const reviewMessages = [
         {
@@ -64,15 +94,22 @@ export const handlePullRequestEvents = async (context) => {
         body: reviewBody,
       });
 
-      if (!changesSummaryMap[file.filename]) {
-        changesSummaryMap[file.filename] = [];
+      if (!commitsAndChangesSummaryMap[file.filename]) {
+        commitsAndChangesSummaryMap[file.filename] = {
+          linked_commit_messages: [],
+          summaries: [],
+        };
       }
-      changesSummaryMap[file.filename].push(changesSummary);
+
+      commitsAndChangesSummaryMap[file.filename].linked_commit_messages = commitMessagesMap[file.filename] || [];
+      commitsAndChangesSummaryMap[file.filename].summaries.push(changesSummary);
     }
   }
 
+  console.log('Commits and Changes Summary Map:', commitsAndChangesSummaryMap);
+
   const walkthroughPrompt = `
-  Provide a precise walkthrough of all the changes made in the pull request based on the given JSON data containing files and their corresponding changes summaries. 
+  Provide a precise walkthrough of all the changes made in the pull request based on the given JSON data containing files and their corresponding changes summaries and linked commit messages. 
   
   Use the following format to give reponse:
   OutputStructure: 
@@ -82,7 +119,7 @@ export const handlePullRequestEvents = async (context) => {
   
   Data:
   \`\`\`
-  ${JSON.stringify(changesSummaryMap, null, 2)}
+  ${JSON.stringify(commitsAndChangesSummaryMap, null, 2)}
   \`\`\`
 
   Please ensure that the response is structured correctly using the custom tag specified and should have direct answer. Do not include any introductory phrases or additional formatting outside of the tags.
@@ -123,9 +160,12 @@ export const handlePullRequestEvents = async (context) => {
       Here goes the summary in list style covering applicable aspects with nested sublist to examplain 
     </summary>
     \`\`\`
+
+    ${prDescription !== '' ? `PR Description by Author: ${prDescription}` : ''}
+
     Data:
     \`\`\`
-    ${JSON.stringify(changesSummaryMap, null, 2)}
+    ${JSON.stringify(commitsAndChangesSummaryMap, null, 2)}
     \`\`\`
   `;
 
@@ -144,17 +184,55 @@ export const handlePullRequestEvents = async (context) => {
   const categorizedSummaryAIReview = await generateChatCompletion(categorizedSummaryMessages);
   const { summary } = extractFieldsWithTags(categorizedSummaryAIReview, ['summary']);
 
+  const overallSummaryMap = {};
+
+  for (const filename in commitsAndChangesSummaryMap) {
+    const summaries = commitsAndChangesSummaryMap[filename].summaries;
+
+    const summaryPrompt = `
+      Generate an overall summary in a singel sentance or short description for the changes made in this file based on the provided changes summary data:
+  
+      ${summaries.join('\n')}
+  
+      Please provide a concise overall summary that captures the essence of the changes made and ensure not to give data in list form as i want want a decriptive short text or a sentance.
+  
+      OutputStructure: 
+      \`\`\`
+      <overallSummary>Your overall summary here</overallSummary>
+      \`\`\`
+    `;
+
+    const summaryMessages = [
+      {
+        role: 'system',
+        content:
+          'You are a summarizer tasked with generating an overall summary for the changes made in a file. Please analyze the provided changes summary and generate a concise overall summary in a single sentance or short description without using any list form to summarize changes.',
+      },
+      {
+        role: 'user',
+        content: summaryPrompt,
+      },
+    ];
+
+    const aiResponse = await generateChatCompletion(summaryMessages);
+    const { overallSummary } = extractFieldsWithTags(aiResponse, ['overallSummary']);
+
+    overallSummaryMap[filename] = overallSummary;
+  }
+
+  console.log('Overall Summary Map:', overallSummaryMap);
+
   const walkthroughAndSummaryCommentContent = `
   ## Walkthrough
-
+  
   ${walkthrough}
-
+  
   ## Changes
-
+  
   | Files/Directories | Change Summary                                              |
   |----------------|-------------------------------------------------------------|
-  ${Object.entries(changesSummaryMap)
-    .map(([filename, summaries]) => summaries.map((summary) => `| \`${filename}\` | ${summary} |`).join('\n'))
+  ${Object.entries(overallSummaryMap)
+    .map(([filename, summary]) => `| \`${filename}\` | ${summary} |`)
     .join('\n')}
   `;
 
@@ -174,15 +252,11 @@ export const handlePullRequestEvents = async (context) => {
     comments: reviewComments,
   });
 
-  let updatedDescription = prDescription || '';
-  if (summary) {
-    updatedDescription += `
-
+  const updatedDescription = `
 ## Summary by CodeBat AI
 
 ${summary}
     `;
-  }
 
   await context.octokit.rest.pulls.update({
     owner: repoOwner,
