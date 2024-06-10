@@ -1,5 +1,5 @@
-import { handleIssueOpened } from './handlers/issueHandler.js';
-import { handlePullRequestEvents } from './handlers/pullRequesthandler.js';
+import issuesHandler from './handlers/issues/index.js';
+import pullsHandler from './handlers/pulls/index.js';
 
 /**
  * This is the main entrypoint to your Probot app
@@ -7,8 +7,6 @@ import { handlePullRequestEvents } from './handlers/pullRequesthandler.js';
  */
 export default (app) => {
   app.log.info('Yay, the app was loaded!');
-
-  app.on(['issues.opened', 'issues.edited'], handleIssueOpened);
-
-  app.on(['pull_request.opened', 'pull_request.reopened', 'pull_request.synchronize'], handlePullRequestEvents);
+  issuesHandler(app);
+  pullsHandler(app);
 };
