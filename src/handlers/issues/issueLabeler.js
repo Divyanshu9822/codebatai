@@ -1,8 +1,8 @@
-import { generateChatCompletion } from '../ai/generateChatCompletion.js';
+import { generateChatCompletion } from '../../ai/generateChatCompletion.js';
 
-export const handleIssueOpened = async (context) => {
+const issueLabeler = async (context) => {
   const action = context.payload.action;
-  
+
   const issueNumber = context.payload.issue.number;
   const repoOwner = context.payload.repository.owner.login;
   const repoName = context.payload.repository.name;
@@ -59,3 +59,5 @@ export const handleIssueOpened = async (context) => {
     });
   }
 };
+
+export default issueLabeler;
