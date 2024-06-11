@@ -40,8 +40,6 @@ const pullReviewer = async (context) => {
     }
   }
 
-  console.log('Commit Messages Map:', commitMessagesMap);
-
   const filesResponse = await context.octokit.rest.pulls.listFiles({
     owner: repoOwner,
     repo: repoName,
@@ -91,7 +89,7 @@ const pullReviewer = async (context) => {
 
       reviewComments.push({
         path: file.filename,
-        position: 1,
+        position: patch.split('\n').length - 1,
         body: reviewBody,
       });
 
@@ -106,8 +104,6 @@ const pullReviewer = async (context) => {
       commitsAndChangesSummaryMap[file.filename].summaries.push(changesSummary);
     }
   }
-
-  console.log('Commits and Changes Summary Map:', commitsAndChangesSummaryMap);
 
   const walkthroughPrompt = `
   Provide a precise walkthrough of all the changes made in the pull request based on the given JSON data containing files and their corresponding changes summaries and linked commit messages. 
@@ -220,8 +216,6 @@ const pullReviewer = async (context) => {
 
     overallSummaryMap[filename] = overallSummary;
   }
-
-  console.log('Overall Summary Map:', overallSummaryMap);
 
   const walkthroughAndSummaryCommentContent = `
   ## Walkthrough
