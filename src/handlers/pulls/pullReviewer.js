@@ -91,7 +91,7 @@ const pullReviewer = async (context) => {
 
       reviewComments.push({
         path: file.filename,
-        position: 1,
+        position: patch.split('\n').length - 1,
         body: reviewBody,
       });
 
