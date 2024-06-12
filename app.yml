@@ -17,7 +17,7 @@ default_events:
   # - check_suite
   # - commit_comment
   # - create
-  # - delete
+  - delete
   # - deployment
   # - deployment_status
   # - fork
@@ -35,14 +35,15 @@ default_events:
 # - project_card
 # - project_column
 # - public
-# - pull_request
-# - pull_request_review
-# - pull_request_review_comment
+- pull_request
+- pull_request_review
+- pull_request_review_comment
+- pull_request_review_thread
 # - push
 # - release
 # - repository
 # - repository_import
-# - status
+- status
 # - team
 # - team_add
 # - watch
@@ -62,7 +63,7 @@ default_permissions:
 
   # Repository contents, commits, branches, downloads, releases, and merges.
   # https://developer.github.com/v3/apps/permissions/#permission-on-contents
-  # contents: read
+  contents: write
 
   # Deployments and deployment statuses.
   # https://developer.github.com/v3/apps/permissions/#permission-on-deployments
@@ -82,7 +83,7 @@ default_permissions:
 
   # Pull requests and related comments, assignees, labels, milestones, and merges.
   # https://developer.github.com/v3/apps/permissions/#permission-on-pull-requests
-  # pull_requests: read
+  pull_requests: write
 
   # Manage the post-receive hooks for a repository.
   # https://developer.github.com/v3/apps/permissions/#permission-on-repository-hooks
@@ -124,14 +125,14 @@ default_permissions:
   # https://developer.github.com/v3/apps/permissions/
   # organization_administration: read
 # The name of the GitHub App. Defaults to the name specified in package.json
-# name: My Probot App
+name: codebatai
 
 # The homepage of your GitHub App.
 # url: https://example.com/
 
 # A description of the GitHub App.
-# description: A description of my awesome app
+description: Automate Your Code Reviews with AI 🚀
 
 # Set to true when your GitHub App is available to the public or false when it is only accessible to the owner of the app.
 # Default: true
-# public: false
+public: false
