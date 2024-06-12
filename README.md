@@ -51,6 +51,13 @@ Code Bat AI is an advanced automation tool that harnesses the power of the Llama
 1. Merge a pull request.
 2. The bot will automatically delete the corresponding branch after mentioning the branch deletion in comment by tagging author, keeping your repository organized.
 
+## Screenshots
+
+<img width="1440" alt="Screenshot 2024-06-12 at 8 16 19 AM" src="https://github.com/Divyanshu9822/codebatai/assets/90151736/f2af0688-442c-47b1-aadd-e8431ae337dd">
+<img width="1440" alt="Screenshot 2024-06-12 at 8 16 41 AM" src="https://github.com/Divyanshu9822/codebatai/assets/90151736/e9e4d997-e433-4d85-af7f-8478c63b54f6">
+<img width="1440" alt="Screenshot 2024-06-12 at 8 16 57 AM" src="https://github.com/Divyanshu9822/codebatai/assets/90151736/d0d08e0f-3eb2-4cfa-8745-afc157d928cc">
+<img width="1440" alt="Screenshot 2024-06-12 at 8 17 04 AM" src="https://github.com/Divyanshu9822/codebatai/assets/90151736/15acc942-6988-41e1-b160-5d73169a1e9f">
+<img width="1440" alt="Screenshot 2024-06-12 at 8 17 17 AM" src="https://github.com/Divyanshu9822/codebatai/assets/90151736/64fd1232-08c2-4ac6-8003-bf48e8c7b847">
 
 ## Contributing
 
