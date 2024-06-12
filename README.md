@@ -1,6 +1,6 @@
 # Code Bat AI
 
-_An AI code review GitHub bot application streamlining PRs reviews in great detail and providing each file change summary, a walkthrough of all changes, and the aspects of changes the code has been updated within the PR description itself._
+_An AI code review GitHub bot application streamlining PRs reviews in great detail and providing each file change summary, a walkthrough of all changes, and the aspects of changes the code has been updated within the PR description itself. It also conducts code reviews and raises change requests in a thread._
 
 ![image](https://github.com/Divyanshu9822/codebatai/assets/90151736/42ad37d4-49dc-4e9a-b895-5921fea7c667)
 
