@@ -34,6 +34,12 @@ Code Bat AI is an advanced automation tool that harnesses the power of the Llama
 
 ## Usage
 
+### Setup and Configuration
+
+For instructions on how to set up and configure the application locally : 
+- [Configuring a GitHub App](https://probot.github.io/docs/development/#configuring-a-github-app)
+- [Manually Configuring a GitHub App](https://probot.github.io/docs/development/#manually-configuring-a-github-app)
+
 ### Issue Labeler
 
 1. Add a new issue in your project.
