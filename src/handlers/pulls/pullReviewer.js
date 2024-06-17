@@ -14,13 +14,14 @@ const pullReviewer = async (context) => {
   const commitsAndChangesSummaryMap = {};
   const commitMessagesMap = {};
 
-  const commitsResponse = await context.octokit.rest.pulls.listCommits({
+  const commitsResponse = await context.octokit.repos.compareCommits({
     owner: repoOwner,
     repo: repoName,
-    pull_number: prNumber,
+    base: context.payload.pull_request.base.sha,
+    head: context.payload.pull_request.head.sha,
   });
 
-  const commits = commitsResponse.data;
+  const { commits, files: changedFiles } = commitsResponse.data;
 
   for (const commit of commits) {
     const commitMessage = commit.commit.message;
@@ -40,15 +41,7 @@ const pullReviewer = async (context) => {
     }
   }
 
-  const filesResponse = await context.octokit.rest.pulls.listFiles({
-    owner: repoOwner,
-    repo: repoName,
-    pull_number: prNumber,
-  });
-
-  const files = filesResponse.data;
-
-  for (const file of files) {
+  for (const file of changedFiles) {
     const patches = file.patch.split('diff --git');
 
     for (const patch of patches) {
