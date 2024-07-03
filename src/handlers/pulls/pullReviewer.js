@@ -69,7 +69,7 @@ const pullReviewer = async (context) => {
         {
           role: 'system',
           content:
-            'You are a Code Reviewer API capable of providing detailed code reviews with potential code replacements and concise summaries of changes using custom tags. Please analyze the code changes thoroughly and provide feedback accordingly. Ensure each section is properly closed with its corresponding tag.',
+            'You are a Code Reviewer AI capable of providing detailed code reviews with potential code replacements and concise summaries of changes using custom tags. Please analyze the code changes thoroughly and provide feedback accordingly. Ensure each section is properly closed with its corresponding tag.',
         },
         {
           role: 'user',
@@ -143,19 +143,19 @@ const pullReviewer = async (context) => {
 
     Provide a short summary under each category (if applicable otherwise don't have that aspect in reponse) based on the given JSON data of changes.
 
+    ${prDescription !== '' ? `PR Description by Author: ${prDescription}` : ''}
+
+    Data:
+    \`\`\`
+    ${JSON.stringify(commitsAndChangesSummaryMap, null, 2)}
+    \`\`\`
+
     Use the following format to give reponse:
     OutputStructure:
     \`\`\`
     <summary> 
       Here goes the summary in list style covering applicable aspects with nested sublist to examplain 
     </summary>
-    \`\`\`
-
-    ${prDescription !== '' ? `PR Description by Author: ${prDescription}` : ''}
-
-    Data:
-    \`\`\`
-    ${JSON.stringify(commitsAndChangesSummaryMap, null, 2)}
     \`\`\`
   `;
 
