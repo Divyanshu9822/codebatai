@@ -10,13 +10,18 @@ const issueLabeler = async (context) => {
   const issueTitle = context.payload.issue.title;
   const issueDescription = context.payload.issue.body;
 
-  let prompt = `Based on the following issue title/description, provide short and concise relevant 3-4 labels at max, separated by commas. The labels should relate to the issue's type, difficulty, and domain, such as "easy", "moderate", "hard", "enhancement", "new-feature", "frontend", "backend", "design", "api-integration", "bug", and other relevant and self-explanatory terms only without any other message in response.
+  let prompt = `Based on the following issue title/description, provide short, concise and relevant 3-4 labels at max, separated by commas. The labels should relate to the issue's type, difficulty, and domain, such as "easy", "moderate", "hard", "enhancement", "new-feature", "frontend", "backend", "design", "api-integration", "bug", and other relevant and self-explanatory terms only without any other message in response.
 
   Issue Title: ${issueTitle}
   
   ${issueDescription ? `Issue Description:\n\n ${issueDescription}` : ''}`;
 
   const messages = [
+    {
+      role: 'system',
+      content:
+        'You are a issue labeler AI which provides appropriate labes for issues based on their title and description.',
+    },
     {
       role: 'user',
       content: prompt,
