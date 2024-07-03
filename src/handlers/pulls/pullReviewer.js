@@ -45,45 +45,72 @@ const pullReviewer = async (context) => {
     const patches = file.patch.split('diff --git');
 
     for (const patch of patches) {
-      const reviewPrompt = `
-        Review the changes in the file '${file.filename}' and provide constructive feedback. Analyze the code quality, highlight potential issues, and suggest improvements. Separate the feedback into two sections:
-  
-        1. <reviewBody>: Offer a detailed review of code changes and suggest better code replacements for particular codeblocks.
-        2. <changesSummary>: Present a short and concise descriptive summary of changes made by analyzing the code patch provided below without any suggestions for improvement.
-  
+      const codeReviewPrompt = `
+        Review the changes in the file '${file.filename}' and provide constructive feedback. Analyze the code quality, highlight potential issues, and suggest improvements.
+
         Changes:
         \`\`\`
         ${patch}
         \`\`\`
-  
-        Please provide the direct response in the following format only without any introductory phrases. Use the custom tags for each section to ensure the response is easy to parse.
-  
-        OutputStructure: 
+
+        Please provide the direct response in the following format only without any introductory phrases.
+
+        OutputStructure:
         \`\`\`
-        <reviewBody>Your detailed review here</reviewBody>
-        <changesSummary>Your short summary for changes done here</changesSummary>
+        <codeReview>Your detailed review here</codeReview>
         \`\`\`
       `;
 
-      const reviewMessages = [
+      const codeReviewMessages = [
         {
           role: 'system',
           content:
-            'You are a Code Reviewer API capable of providing detailed code reviews with potential code replacements and concise summaries of changes using custom tags. Please analyze the code changes thoroughly and provide feedback accordingly. Ensure each section is properly closed with its corresponding tag.',
+            'You are a Code Reviewer AI capable of providing detailed code reviews with potential code replacements using custom tags. Please analyze the code changes thoroughly and provide a detailed review accordingly. Ensure the response is properly closed with the <codeReview> tag.',
         },
         {
           role: 'user',
-          content: reviewPrompt,
+          content: codeReviewPrompt,
         },
       ];
 
-      const aiReview = await generateChatCompletion(reviewMessages);
-      const { reviewBody, changesSummary } = extractFieldsWithTags(aiReview, ['reviewBody', 'changesSummary']);
+      const changeSummaryPrompt = `
+      Review the changes in the file '${file.filename}' and provide a short and concise descriptive summary of the changes made.
+
+      Changes:
+      \`\`\`
+      ${patch}
+      \`\`\`
+
+      Please provide the direct response in the following format only without any introductory phrases.
+
+      OutputStructure:
+      \`\`\`
+      <changeSummary>Your short summary for changes done here</changeSummary>
+      \`\`\`
+    `;
+
+      const changeSummaryMessages = [
+        {
+          role: 'system',
+          content:
+            'You are a Code Reviewer AI capable of providing concise summaries of changes using custom tags. Please analyze the code changes thoroughly and provide a short summary accordingly. Ensure the response is properly closed with the <changeSummary> tag.',
+        },
+        {
+          role: 'user',
+          content: changeSummaryPrompt,
+        },
+      ];
+
+      const codeReviewResponse = await generateChatCompletion(codeReviewMessages);
+      const { codeReview } = extractFieldsWithTags(codeReviewResponse, ['codeReview']);
+
+      const changeSummaryResponse = await generateChatCompletion(changeSummaryMessages);
+      const { changeSummary } = extractFieldsWithTags(changeSummaryResponse, ['codeReview', 'changeSummary']);
 
       reviewComments.push({
         path: file.filename,
         position: patch.split('\n').length - 1,
-        body: reviewBody,
+        body: codeReview,
       });
 
       if (!commitsAndChangesSummaryMap[file.filename]) {
@@ -94,7 +121,7 @@ const pullReviewer = async (context) => {
       }
 
       commitsAndChangesSummaryMap[file.filename].linked_commit_messages = commitMessagesMap[file.filename] || [];
-      commitsAndChangesSummaryMap[file.filename].summaries.push(changesSummary);
+      commitsAndChangesSummaryMap[file.filename].summaries.push(changeSummary);
     }
   }
 
@@ -143,19 +170,19 @@ const pullReviewer = async (context) => {
 
     Provide a short summary under each category (if applicable otherwise don't have that aspect in reponse) based on the given JSON data of changes.
 
+    ${prDescription !== '' ? `PR Description by Author: ${prDescription}` : ''}
+
+    Data:
+    \`\`\`
+    ${JSON.stringify(commitsAndChangesSummaryMap, null, 2)}
+    \`\`\`
+
     Use the following format to give reponse:
     OutputStructure:
     \`\`\`
     <summary> 
       Here goes the summary in list style covering applicable aspects with nested sublist to examplain 
     </summary>
-    \`\`\`
-
-    ${prDescription !== '' ? `PR Description by Author: ${prDescription}` : ''}
-
-    Data:
-    \`\`\`
-    ${JSON.stringify(commitsAndChangesSummaryMap, null, 2)}
     \`\`\`
   `;
 
