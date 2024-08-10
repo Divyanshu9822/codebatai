@@ -5,7 +5,9 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-export const generateChatCompletion = async (messages, maxTokens = 1024, model = 'llama3-8b-8192') => {
+const model = process.env.GROQ_AI_MODEL_NAME || 'llama3-8b-8192';
+
+export const generateChatCompletion = async (messages, maxTokens = 1024) => {
   try {
     await ensureRateLimit();
     const chatCompletion = await groq.chat.completions.create({
