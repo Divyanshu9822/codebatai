@@ -206,6 +206,8 @@ ${walkthrough}
   }
 
   const updatedDescription = `
+${prDescription}
+---
 ## Summary by CodeBat AI
 
 ${summary}
