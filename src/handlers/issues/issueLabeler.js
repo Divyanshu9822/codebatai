@@ -2,34 +2,36 @@ import { generateChatCompletion } from '../../ai/generateChatCompletion.js';
 
 const issueLabeler = async (context) => {
   const action = context.payload.action;
-
   const issueNumber = context.payload.issue.number;
   const repoOwner = context.payload.repository.owner.login;
   const repoName = context.payload.repository.name;
-
   const issueTitle = context.payload.issue.title;
   const issueDescription = context.payload.issue.body;
 
-  let prompt = `Based on the following issue title/description, provide short, concise and relevant 3-4 labels at max, separated by commas. The labels should relate to the issue's type, difficulty, and domain, such as "easy", "moderate", "hard", "enhancement", "new-feature", "frontend", "backend", "design", "api-integration", "bug", and other relevant and self-explanatory terms only without any other message in response.
+  const labelPrompt = `
+    Based on the following issue title and description, generate a list of 3-4 relevant labels. These labels should be concise, specific to the issue's type, difficulty, and domain, and should include terms such as "bug", "enhancement", "new-feature", "frontend", "backend", "design", "api-integration", "easy", "moderate", "hard", etc. 
 
-  Issue Title: ${issueTitle}
-  
-  ${issueDescription ? `Issue Description:\n\n ${issueDescription}` : ''}`;
+    Avoid including any extraneous text or messages in your response. Provide the labels separated by commas.
+
+    Issue Title: ${issueTitle}
+    
+    ${issueDescription ? `Issue Description:\n\n${issueDescription}` : ''}
+  `;
 
   const messages = [
     {
       role: 'system',
       content:
-        'You are a issue labeler AI which provides appropriate labes for issues based on their title and description.',
+        'You are an AI designed to label issues based on their title and description. Provide relevant labels for issues, ensuring they are concise and reflect the type, difficulty, and domain of the issue.',
     },
     {
       role: 'user',
-      content: prompt,
+      content: labelPrompt,
     },
   ];
 
-  const aiLabels = await generateChatCompletion(messages);
-  const newLabels = aiLabels.split(',').map((label) => label.trim());
+  const aiLabelsResponse = await generateChatCompletion(messages);
+  const newLabels = aiLabelsResponse.split(',').map((label) => label.trim());
 
   if (action === 'opened') {
     await context.octokit.issues.addLabels({
