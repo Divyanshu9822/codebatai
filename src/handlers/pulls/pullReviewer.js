@@ -111,7 +111,7 @@ const pullReviewer = async (context) => {
 
       console.log('Review comments:', codeReview);
 
-      // if (triageDecision === 'NEEDS_REVIEW') {
+      if (triageDecision === 'NEEDS_REVIEW') {
       reviewComments.push({
         path: file.filename,
         position: patch.split('\n').length - 1,
@@ -127,7 +127,7 @@ const pullReviewer = async (context) => {
 
       commitsAndChangesSummaryMap[file.filename].linked_commit_messages = commitMessagesMap[file.filename] || [];
       commitsAndChangesSummaryMap[file.filename].summaries.push(fileSummary);
-      // }
+      }
     }
   }
 
