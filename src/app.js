@@ -1,5 +1,4 @@
-import issuesHandler from './handlers/issues/index.js';
-import pullsHandler from './handlers/pulls/index.js';
+import handler from './handlers/index.js';
 
 /**
  * This is the main entrypoint to your Probot app
@@ -7,6 +6,5 @@ import pullsHandler from './handlers/pulls/index.js';
  */
 export default (app) => {
   app.log.info('Yay, the app was loaded!');
-  issuesHandler(app);
-  pullsHandler(app);
+  handler(app);
 };
