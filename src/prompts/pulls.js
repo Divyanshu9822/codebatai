@@ -46,12 +46,16 @@ export const triageFileDiff = (filename, summary) => `
   \`\`\`
 `;
 
-export const summarizeChangesets = (rawSummary) => `
-  Below is a list of changesets. Group related changes and remove duplicates.
+export const summarizeChangesets = (changesMap, prDescription, prTitle) => `
+  Below is a list of changesets. Analyse the changesets along with PR description and title and provide a grouped summary of the changes peoperly as the output from this will be given to AI as prompts for further features.
+
+  PR Title: ${prTitle}
+
+  PR Description: ${prDescription}
 
   Changesets:
   \`\`\`
-  ${rawSummary}
+  ${changesMap}
   \`\`\`
 
   OutputStructure:
@@ -60,8 +64,12 @@ export const summarizeChangesets = (rawSummary) => `
   \`\`\`
 `;
 
-export const reviewFileDiff = (filename, summary, patch) => `
+export const reviewFileDiff = (filename, summary, patch, prDescription, prTitle) => `
   File: \`${filename}\`
+
+  PR Title: ${prTitle}
+
+  PR Description: ${prDescription}
 
   Summary:
   \`\`\`
@@ -73,6 +81,7 @@ export const reviewFileDiff = (filename, summary, patch) => `
   IMPORTANT Instructions :
 
   Input: New hunks annotated with line numbers and old hunks (replaced code). Hunks represent incomplete code fragments.
+  Additional Context: PR title, description and summaries.
   Task: Review new hunks for substantive issues using provided context and respond with comments if necessary.
   Output: Review comments in markdown with exact line number ranges in new hunks. Start and end line numbers must be within the same hunk. For single-line comments, start=end line number. Must use example response format below.
   Use fenced code blocks using the relevant language identifier where applicable.
@@ -175,8 +184,10 @@ export const walkthroughOfChanges = (groupedSummary) => `
   \`\`\`
 `;
 
-export const categorizedSummary = (groupedSummary, prDescription) => `
+export const categorizedSummary = (groupedSummary, prDescription, prTitle) => `
   Categorize the changes into the following categories: Bug Fixes, New Features, Docs, Refactor etc.
+
+  PR Title: ${prTitle}
 
   PR Description: ${prDescription}
 

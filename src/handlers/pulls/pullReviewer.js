@@ -121,11 +121,7 @@ const pullReviewer = async (context) => {
     }
   }
 
-  const rawSummary = Object.values(commitsAndChangesSummaryMap)
-    .map(({ summaries }) => summaries.join('\n'))
-    .join('\n');
-
-  const groupedSummaryPrompt = summarizeChangesets(rawSummary);
+  const groupedSummaryPrompt = summarizeChangesets(commitsAndChangesSummaryMap, prDescription, prTitle);
   const groupedSummaryMessages = [
     {
       role: 'system',
@@ -157,7 +153,7 @@ const pullReviewer = async (context) => {
   const walkthroughResponse = await generateChatCompletion(walkthroughMessages);
   const { walkthrough } = extractFieldsWithTags(walkthroughResponse, ['walkthrough']);
 
-  const categorizedSummaryPrompt = categorizedSummary(groupedSummary, prDescription);
+  const categorizedSummaryPrompt = categorizedSummary(groupedSummary, prDescription, prTitle);
   const categorizedSummaryMessages = [
     {
       role: 'system',
@@ -170,7 +166,7 @@ const pullReviewer = async (context) => {
     },
   ];
 
-  const categorizedSummaryResponse = await generateChatCompletion(categorizedSummaryMessages);
+  const categorizedSummaryResponse = await generateChatCompletion(categorizedSummaryMessages, prDescription, prTitle);
   const { summary } = extractFieldsWithTags(categorizedSummaryResponse, ['summary']);
 
   const changesEntries = Object.entries(commitsAndChangesSummaryMap)
