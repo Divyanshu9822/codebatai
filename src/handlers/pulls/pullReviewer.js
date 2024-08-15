@@ -102,21 +102,21 @@ const pullReviewer = async (context) => {
       const { codeReview } = extractFieldsWithTags(reviewResponse, ['codeReview']);
 
       if (triageDecision === 'NEEDS_REVIEW') {
-      reviewComments.push({
-        path: file.filename,
-        position: patch.split('\n').length - 1,
-        body: codeReview,
-      });
+        reviewComments.push({
+          path: file.filename,
+          position: patch.split('\n').length - 1,
+          body: codeReview,
+        });
 
-      if (!commitsAndChangesSummaryMap[file.filename]) {
-        commitsAndChangesSummaryMap[file.filename] = {
-          linked_commit_messages: [],
-          summaries: [],
-        };
-      }
+        if (!commitsAndChangesSummaryMap[file.filename]) {
+          commitsAndChangesSummaryMap[file.filename] = {
+            linked_commit_messages: [],
+            summaries: [],
+          };
+        }
 
-      commitsAndChangesSummaryMap[file.filename].linked_commit_messages = commitMessagesMap[file.filename] || [];
-      commitsAndChangesSummaryMap[file.filename].summaries.push(fileSummary);
+        commitsAndChangesSummaryMap[file.filename].linked_commit_messages = commitMessagesMap[file.filename] || [];
+        commitsAndChangesSummaryMap[file.filename].summaries.push(fileSummary);
       }
     }
   }
@@ -173,18 +173,26 @@ const pullReviewer = async (context) => {
   const categorizedSummaryResponse = await generateChatCompletion(categorizedSummaryMessages);
   const { summary } = extractFieldsWithTags(categorizedSummaryResponse, ['summary']);
 
+  const changesEntries = Object.entries(commitsAndChangesSummaryMap)
+    .map(([filename, { summaries }]) => `| \`${filename}\` | ${summaries.join(' ')} |`)
+    .join('\n');
+
   const walkthroughAndSummaryCommentContent = `
 ## Walkthrough
 
 ${walkthrough}
 
+${
+  changesEntries
+    ? `
 ## Changes
 
 | Files/Directories | Change Summary                                              |
 |-------------------|-------------------------------------------------------------|
-  ${Object.entries(commitsAndChangesSummaryMap)
-    .map(([filename, { summaries }]) => `| \`${filename}\` | ${summaries.join(' ')} |`)
-    .join('\n')}
+${changesEntries}
+`
+    : ''
+}
 `;
 
   await context.octokit.rest.issues.createComment({
