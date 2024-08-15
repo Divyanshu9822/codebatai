@@ -85,7 +85,7 @@ const pullReviewer = async (context) => {
       const triageResponse = await generateChatCompletion(triageMessages);
       const { TRIAGE: triageDecision } = extractFieldsWithTags(triageResponse, ['TRIAGE']);
 
-      const reviewPrompt = reviewFileDiff(file.filename, fileSummary, patch);
+      const reviewPrompt = reviewFileDiff(file.filename, fileSummary, patch, prDescription, prTitle);
       const reviewMessages = [
         {
           role: 'system',
@@ -166,7 +166,7 @@ const pullReviewer = async (context) => {
     },
   ];
 
-  const categorizedSummaryResponse = await generateChatCompletion(categorizedSummaryMessages, prDescription, prTitle);
+  const categorizedSummaryResponse = await generateChatCompletion(categorizedSummaryMessages);
   const { summary } = extractFieldsWithTags(categorizedSummaryResponse, ['summary']);
 
   const changesEntries = Object.entries(commitsAndChangesSummaryMap)
