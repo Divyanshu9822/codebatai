@@ -85,7 +85,7 @@ const pullReviewer = async (context) => {
       const triageResponse = await generateChatCompletion(triageMessages);
       const { TRIAGE: triageDecision } = extractFieldsWithTags(triageResponse, ['TRIAGE']);
 
-      const reviewPrompt = reviewFileDiff(file.filename, fileSummary, patch);
+      const reviewPrompt = reviewFileDiff(file.filename, fileSummary, patch, prDescription, prTitle);
       const reviewMessages = [
         {
           role: 'system',
@@ -102,30 +102,26 @@ const pullReviewer = async (context) => {
       const { codeReview } = extractFieldsWithTags(reviewResponse, ['codeReview']);
 
       if (triageDecision === 'NEEDS_REVIEW') {
-      reviewComments.push({
-        path: file.filename,
-        position: patch.split('\n').length - 1,
-        body: codeReview,
-      });
+        reviewComments.push({
+          path: file.filename,
+          position: patch.split('\n').length - 1,
+          body: codeReview,
+        });
 
-      if (!commitsAndChangesSummaryMap[file.filename]) {
-        commitsAndChangesSummaryMap[file.filename] = {
-          linked_commit_messages: [],
-          summaries: [],
-        };
-      }
+        if (!commitsAndChangesSummaryMap[file.filename]) {
+          commitsAndChangesSummaryMap[file.filename] = {
+            linked_commit_messages: [],
+            summaries: [],
+          };
+        }
 
-      commitsAndChangesSummaryMap[file.filename].linked_commit_messages = commitMessagesMap[file.filename] || [];
-      commitsAndChangesSummaryMap[file.filename].summaries.push(fileSummary);
+        commitsAndChangesSummaryMap[file.filename].linked_commit_messages = commitMessagesMap[file.filename] || [];
+        commitsAndChangesSummaryMap[file.filename].summaries.push(fileSummary);
       }
     }
   }
 
-  const rawSummary = Object.values(commitsAndChangesSummaryMap)
-    .map(({ summaries }) => summaries.join('\n'))
-    .join('\n');
-
-  const groupedSummaryPrompt = summarizeChangesets(rawSummary);
+  const groupedSummaryPrompt = summarizeChangesets(commitsAndChangesSummaryMap, prDescription, prTitle);
   const groupedSummaryMessages = [
     {
       role: 'system',
@@ -157,7 +153,7 @@ const pullReviewer = async (context) => {
   const walkthroughResponse = await generateChatCompletion(walkthroughMessages);
   const { walkthrough } = extractFieldsWithTags(walkthroughResponse, ['walkthrough']);
 
-  const categorizedSummaryPrompt = categorizedSummary(groupedSummary, prDescription);
+  const categorizedSummaryPrompt = categorizedSummary(groupedSummary, prDescription, prTitle);
   const categorizedSummaryMessages = [
     {
       role: 'system',
@@ -173,18 +169,26 @@ const pullReviewer = async (context) => {
   const categorizedSummaryResponse = await generateChatCompletion(categorizedSummaryMessages);
   const { summary } = extractFieldsWithTags(categorizedSummaryResponse, ['summary']);
 
+  const changesEntries = Object.entries(commitsAndChangesSummaryMap)
+    .map(([filename, { summaries }]) => `| \`${filename}\` | ${summaries.join(' ')} |`)
+    .join('\n');
+
   const walkthroughAndSummaryCommentContent = `
 ## Walkthrough
 
 ${walkthrough}
 
+${
+  changesEntries
+    ? `
 ## Changes
 
 | Files/Directories | Change Summary                                              |
 |-------------------|-------------------------------------------------------------|
-  ${Object.entries(commitsAndChangesSummaryMap)
-    .map(([filename, { summaries }]) => `| \`${filename}\` | ${summaries.join(' ')} |`)
-    .join('\n')}
+${changesEntries}
+`
+    : ''
+}
 `;
 
   await context.octokit.rest.issues.createComment({
