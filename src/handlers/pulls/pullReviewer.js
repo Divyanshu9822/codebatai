@@ -162,7 +162,7 @@ const pullReviewer = async (context) => {
     {
       role: 'system',
       content:
-        'You are an AI capable of categorizing and summarizing changes. Categorize the changes into aspects such as Bug Fixes, New Features, etc. Provide the categorized summary within the <summary> tag.',
+        'You are an AI capable of categorizing and summarizing changes. Categorize the changes into aspects such as Bug Fixes, New Features, etc for pull request Description. Provide the categorized summary within the <summary> tag.',
     },
     {
       role: 'user',

@@ -68,6 +68,16 @@ export const reviewFileDiff = (filename, summary, patch) => `
   ${summary}
   \`\`\`
 
+  Changes:
+  \`\`\`diff
+  ${patch}
+  \`\`\`
+
+  OutputStructure:
+  \`\`\`
+  <codeReview>Your review here</codeReview>
+  \`\`\`
+
   IMPORTANT Instructions :
 
   Input: New hunks annotated with line numbers and old hunks (replaced code). Hunks represent incomplete code fragments.
@@ -90,7 +100,7 @@ export const reviewFileDiff = (filename, summary, patch) => `
 
   ## Example
 
-  ### Example changes
+  ### Example changes and responses for your better understanding. So no need to provide a response for these examples.
 
   ---new_hunk---
   \`\`\`
@@ -144,16 +154,6 @@ export const reviewFileDiff = (filename, summary, patch) => `
   LGTM!
 
   ---
-
-  Changes:
-  \`\`\`diff
-  ${patch}
-  \`\`\`
-
-  OutputStructure:
-  \`\`\`
-  <codeReview>Your review here</codeReview>
-  \`\`\`
 `;
 
 export const walkthroughOfChanges = (groupedSummary) => `
