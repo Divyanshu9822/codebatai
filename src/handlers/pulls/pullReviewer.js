@@ -47,9 +47,6 @@ const pullReviewer = async (context) => {
     }
   }
 
-  console.log('Changed files:', changedFiles);
-  console.log('Commit messages:', commitMessagesMap);
-
   for (const file of changedFiles) {
     const patches = file.patch.split('diff --git');
 
@@ -72,8 +69,6 @@ const pullReviewer = async (context) => {
       const fileSummaryResponse = await generateChatCompletion(fileSummaryMessages);
       const { fileSummary } = extractFieldsWithTags(fileSummaryResponse, ['fileSummary']);
 
-      console.log('File summary:', fileSummary);
-
       const triagePrompt = triageFileDiff(file.filename, fileSummary);
       const triageMessages = [
         {
@@ -90,9 +85,6 @@ const pullReviewer = async (context) => {
       const triageResponse = await generateChatCompletion(triageMessages);
       const { TRIAGE: triageDecision } = extractFieldsWithTags(triageResponse, ['TRIAGE']);
 
-      console.log('Triage response:', triageResponse);
-      console.log('Triage decision:', triageDecision);
-
       const reviewPrompt = reviewFileDiff(file.filename, fileSummary, patch);
       const reviewMessages = [
         {
@@ -108,8 +100,6 @@ const pullReviewer = async (context) => {
 
       const reviewResponse = await generateChatCompletion(reviewMessages);
       const { codeReview } = extractFieldsWithTags(reviewResponse, ['codeReview']);
-
-      console.log('Review comments:', codeReview);
 
       if (triageDecision === 'NEEDS_REVIEW') {
       reviewComments.push({
@@ -131,8 +121,6 @@ const pullReviewer = async (context) => {
     }
   }
 
-  console.log('Commits and changes summary:', commitsAndChangesSummaryMap);
-
   const rawSummary = Object.values(commitsAndChangesSummaryMap)
     .map(({ summaries }) => summaries.join('\n'))
     .join('\n');
@@ -153,8 +141,6 @@ const pullReviewer = async (context) => {
   const groupedSummaryResponse = await generateChatCompletion(groupedSummaryMessages);
   const { groupedSummary } = extractFieldsWithTags(groupedSummaryResponse, ['groupedSummary']);
 
-  console.log('Grouped summary:', groupedSummary);
-
   const walkthroughPrompt = walkthroughOfChanges(groupedSummary);
   const walkthroughMessages = [
     {
@@ -171,8 +157,6 @@ const pullReviewer = async (context) => {
   const walkthroughResponse = await generateChatCompletion(walkthroughMessages);
   const { walkthrough } = extractFieldsWithTags(walkthroughResponse, ['walkthrough']);
 
-  console.log('Walkthrough:', walkthrough);
-
   const categorizedSummaryPrompt = categorizedSummary(groupedSummary, prDescription);
   const categorizedSummaryMessages = [
     {
@@ -188,8 +172,6 @@ const pullReviewer = async (context) => {
 
   const categorizedSummaryResponse = await generateChatCompletion(categorizedSummaryMessages);
   const { summary } = extractFieldsWithTags(categorizedSummaryResponse, ['summary']);
-
-  console.log('Categorized summary:', summary);
 
   const walkthroughAndSummaryCommentContent = `
 ## Walkthrough
