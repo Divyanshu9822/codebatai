@@ -43,6 +43,7 @@ const pullReviewer = async (context) => {
   const prompts = new Prompts();
 
   for (const file of changedFiles) {
+    if (file.status === 'removed') continue; // Skip removed files
     const patches = file.patch.split('diff --git');
 
     for (const patch of patches) {
