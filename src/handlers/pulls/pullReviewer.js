@@ -11,8 +11,7 @@ const pullReviewer = async (context) => {
   const prDescription = prDetails.body;
 
   const reviewComments = [];
-  const commitsAndChangesSummaryMap = {};
-  // const commitMessagesMap = {};
+  const prChangesData = {};
 
   const commitsResponse = await context.octokit.repos.compareCommits({
     owner: repoOwner,
@@ -22,23 +21,6 @@ const pullReviewer = async (context) => {
   });
 
   const { commits, files: changedFiles } = commitsResponse.data;
-
-  // for (const commit of commits) {
-  //   const commitMessage = commit.commit.message;
-  //   const commitUrl = commit.url;
-  //   const commitDetailsResponse = await context.octokit.request(`GET ${commitUrl}`);
-  //   const commitFiles = commitDetailsResponse.data.files;
-
-  //   for (const file of commitFiles) {
-  //     const filename = file.filename;
-
-  //     if (!commitMessagesMap[filename]) {
-  //       commitMessagesMap[filename] = [];
-  //     }
-
-  //     commitMessagesMap[filename].push(commitMessage);
-  //   }
-  // }
 
   const prompts = new Prompts();
 
@@ -104,21 +86,19 @@ const pullReviewer = async (context) => {
           body: codeReview,
         });
 
-        if (!commitsAndChangesSummaryMap[file.filename]) {
-          commitsAndChangesSummaryMap[file.filename] = {
-            // linked_commit_messages: [],
+        if (!prChangesData[file.filename]) {
+          prChangesData[file.filename] = {
             file_diff_summaries: [],
           };
         }
 
-        // commitsAndChangesSummaryMap[file.filename].linked_commit_messages = commitMessagesMap[file.filename] || [];
-        commitsAndChangesSummaryMap[file.filename].file_diff_summaries.push(fileSummary);
+        prChangesData[file.filename].file_diff_summaries.push(fileSummary);
       }
     }
   }
 
-  for (const file in commitsAndChangesSummaryMap) {
-    const file_diff_summaries = commitsAndChangesSummaryMap[file].file_diff_summaries;
+  for (const file in prChangesData) {
+    const file_diff_summaries = prChangesData[file].file_diff_summaries;
 
     const groupedSummaryPrompt = prompts.summarizeChangesets(file, file_diff_summaries);
     const groupedSummaryMessages = [
@@ -136,22 +116,22 @@ const pullReviewer = async (context) => {
     const groupedSummaryResponse = await generateChatCompletion(groupedSummaryMessages);
     const { groupedSummary } = extractFieldsWithTags(groupedSummaryResponse, ['groupedSummary']);
 
-    if (!commitsAndChangesSummaryMap[file].hasOwnProperty('changes_summary')) {
-      commitsAndChangesSummaryMap[file].changes_summary = '';
+    if (!prChangesData[file].hasOwnProperty('changes_summary')) {
+      prChangesData[file].changes_summary = '';
     }
 
-    commitsAndChangesSummaryMap[file].changes_summary = groupedSummary;
+    prChangesData[file].changes_summary = groupedSummary;
   }
 
-  const formatChangesMap = (commitsAndChangesSummaryMap) => {
-    return Object.entries(commitsAndChangesSummaryMap)
+  const formatChangesMap = (prChangesData) => {
+    return Object.entries(prChangesData)
       .map(
         ([filename, { changes_summary }]) => `**Filename:** \`${filename}\`\n**Changes Summary:** ${changes_summary}`
       )
       .join('\n\n');
   };
 
-  const formattedChangesData = formatChangesMap(commitsAndChangesSummaryMap);
+  const formattedChangesData = formatChangesMap(prChangesData);
 
   const walkthroughPrompt = prompts.walkthroughOfChanges(formattedChangesData);
 
@@ -186,7 +166,7 @@ const pullReviewer = async (context) => {
   const categorizedSummaryResponse = await generateChatCompletion(categorizedSummaryMessages);
   const { summary } = extractFieldsWithTags(categorizedSummaryResponse, ['summary']);
 
-  const changesEntries = Object.entries(commitsAndChangesSummaryMap)
+  const changesEntries = Object.entries(prChangesData)
     .map(([filename, { changes_summary }]) => `| \`${filename}\` | ${changes_summary} |`)
     .join('\n');
 
