@@ -226,8 +226,7 @@ ${changesEntries}
   }
 
   const updatedDescription = `
-${prDescription}
----
+${prDescription ? `${prDescription}\n---\n` : ''}
 ## Summary by CodeBat AI
 
 ${summary}
