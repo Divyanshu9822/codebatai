@@ -1,4 +1,6 @@
-export const summarizeFileDiff = (filename, patch) => `
+export class Prompts {
+  summarizeFileDiff = (filename, patch) => {
+    return `
   Review the changes in the file \`${filename}\` and summarize the modifications.
 
   Changes:
@@ -19,8 +21,10 @@ export const summarizeFileDiff = (filename, patch) => `
   <fileSummary>Your summary here</fileSummary>
   \`\`\`
 `;
+  };
 
-export const triageFileDiff = (filename, summary) => `
+  triageFileDiff = (filename, summary) => {
+    return `
   Based on the following summary of changes, triage the file as either \`NEEDS_REVIEW\` or \`APPROVED\`.
 
   File: \`${filename}\`
@@ -45,8 +49,10 @@ export const triageFileDiff = (filename, summary) => `
   <TRIAGE> NEEDS_REVIEW or APPROVED </TRIAGE>
   \`\`\`
 `;
+  };
 
-export const summarizeChangesets = (changesMap, prDescription, prTitle) => `
+  summarizeChangesets = (changesMap, prDescription, prTitle) => {
+    return `
   Below is a list of changesets. Analyse the changesets along with PR description and title and provide a grouped summary of the changes peoperly as the output from this will be given to AI as prompts for further features.
 
   PR Title: ${prTitle}
@@ -63,8 +69,10 @@ export const summarizeChangesets = (changesMap, prDescription, prTitle) => `
   <groupedSummary>Your grouped summary here</groupedSummary>
   \`\`\`
 `;
+  };
 
-export const reviewFileDiff = (filename, summary, patch, prDescription, prTitle) => `
+  reviewFileDiff = (filename, summary, patch, prDescription, prTitle) => {
+    return `
   File: \`${filename}\`
 
   PR Title: ${prTitle}
@@ -169,8 +177,10 @@ export const reviewFileDiff = (filename, summary, patch, prDescription, prTitle)
   <codeReview>Your review as instructed here</codeReview>
   \`\`\`
 `;
+  };
 
-export const walkthroughOfChanges = (groupedSummary) => `
+  walkthroughOfChanges = (groupedSummary) => {
+    return `
   Provide a walkthrough of the changes made across all files in this pull request.
 
   Changes:
@@ -183,8 +193,10 @@ export const walkthroughOfChanges = (groupedSummary) => `
   <walkthrough>Your walkthrough here</walkthrough>
   \`\`\`
 `;
+  };
 
-export const categorizedSummary = (groupedSummary, prDescription, prTitle) => `
+  categorizedSummary = (groupedSummary, prDescription, prTitle) => {
+    return `
   Categorize the changes into the following categories: Bug Fixes, New Features, Docs, Refactor etc.
 
   PR Title: ${prTitle}
@@ -201,3 +213,5 @@ export const categorizedSummary = (groupedSummary, prDescription, prTitle) => `
   <summary>Your categorized summary here</summary>
   \`\`\`
 `;
+  };
+}

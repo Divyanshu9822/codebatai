@@ -1,13 +1,6 @@
 import { generateChatCompletion } from '../../ai/generateChatCompletion.js';
 import { extractFieldsWithTags } from '../../utils/index.js';
-import {
-  summarizeFileDiff,
-  triageFileDiff,
-  summarizeChangesets,
-  reviewFileDiff,
-  walkthroughOfChanges,
-  categorizedSummary,
-} from '../../prompts/pulls.js';
+import { Prompts } from '../../prompts/pulls.js';
 
 const pullReviewer = async (context) => {
   const prNumber = context.payload.pull_request.number;
@@ -47,13 +40,15 @@ const pullReviewer = async (context) => {
     }
   }
 
+  const prompts = new Prompts();
+
   for (const file of changedFiles) {
     const patches = file.patch.split('diff --git');
 
     for (const patch of patches) {
       if (!patch.trim()) continue; // Skip empty patches
 
-      const fileSummaryPrompt = summarizeFileDiff(file.filename, patch);
+      const fileSummaryPrompt = prompts.summarizeFileDiff(file.filename, patch);
       const fileSummaryMessages = [
         {
           role: 'system',
@@ -69,7 +64,7 @@ const pullReviewer = async (context) => {
       const fileSummaryResponse = await generateChatCompletion(fileSummaryMessages);
       const { fileSummary } = extractFieldsWithTags(fileSummaryResponse, ['fileSummary']);
 
-      const triagePrompt = triageFileDiff(file.filename, fileSummary);
+      const triagePrompt = prompts.triageFileDiff(file.filename, fileSummary);
       const triageMessages = [
         {
           role: 'system',
@@ -85,7 +80,7 @@ const pullReviewer = async (context) => {
       const triageResponse = await generateChatCompletion(triageMessages);
       const { TRIAGE: triageDecision } = extractFieldsWithTags(triageResponse, ['TRIAGE']);
 
-      const reviewPrompt = reviewFileDiff(file.filename, fileSummary, patch, prDescription, prTitle);
+      const reviewPrompt = prompts.reviewFileDiff(file.filename, fileSummary, patch, prDescription, prTitle);
       const reviewMessages = [
         {
           role: 'system',
@@ -121,7 +116,7 @@ const pullReviewer = async (context) => {
     }
   }
 
-  const groupedSummaryPrompt = summarizeChangesets(commitsAndChangesSummaryMap, prDescription, prTitle);
+  const groupedSummaryPrompt = prompts.summarizeChangesets(commitsAndChangesSummaryMap, prDescription, prTitle);
   const groupedSummaryMessages = [
     {
       role: 'system',
@@ -137,7 +132,7 @@ const pullReviewer = async (context) => {
   const groupedSummaryResponse = await generateChatCompletion(groupedSummaryMessages);
   const { groupedSummary } = extractFieldsWithTags(groupedSummaryResponse, ['groupedSummary']);
 
-  const walkthroughPrompt = walkthroughOfChanges(groupedSummary);
+  const walkthroughPrompt = prompts.walkthroughOfChanges(groupedSummary);
   const walkthroughMessages = [
     {
       role: 'system',
@@ -153,7 +148,7 @@ const pullReviewer = async (context) => {
   const walkthroughResponse = await generateChatCompletion(walkthroughMessages);
   const { walkthrough } = extractFieldsWithTags(walkthroughResponse, ['walkthrough']);
 
-  const categorizedSummaryPrompt = categorizedSummary(groupedSummary, prDescription, prTitle);
+  const categorizedSummaryPrompt = prompts.categorizedSummary(groupedSummary, prDescription, prTitle);
   const categorizedSummaryMessages = [
     {
       role: 'system',
