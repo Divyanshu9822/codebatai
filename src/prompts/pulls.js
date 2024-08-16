@@ -51,18 +51,24 @@ export class Prompts {
 `;
   };
 
-  summarizeChangesets = (changesMap, prDescription, prTitle) => {
+  summarizeChangesets = (file, file_diff_summaries) => {
     return `
-  Below is a list of changesets. Analyse the changesets along with PR description and title and provide a grouped summary of the changes peoperly as the output from this will be given to AI as prompts for further features.
+  Below is a list of file difference summary in file difference summaries and the list of commit messages linked to file. Analyse the file difference summary and provide a grouped summary of the changes under 50 words.
 
-  PR Title: ${prTitle}
+  Filename : ${file}
 
-  PR Description: ${prDescription}
-
-  Changesets:
+  File difference summaries:
   \`\`\`
-  ${changesMap}
+  ${file_diff_summaries.join('\n')}
   \`\`\`
+
+  Important:
+
+  - In your grouped summary do not mention that the file needs a through review or caution about
+  potential issues.
+  - Do not mention anything about the commit message in the grouped summary.
+  - Do not provide any reasoning about the summary you will be generating.
+  - Do not mention that these changes affect the logic or functionality of the code in the grouped summary. You must only tell about the changes made in the file by analysing the file difference summaries list.
 
   OutputStructure:
   \`\`\`
@@ -179,14 +185,21 @@ export class Prompts {
 `;
   };
 
-  walkthroughOfChanges = (groupedSummary) => {
+  walkthroughOfChanges = (data) => {
     return `
-  Provide a walkthrough of the changes made across all files in this pull request.
+  Provide a walkthrough of the changes made across all files in this pull request. Based on the provided changes data, give a detailed walkthrough within the <walkthrough> tag. 
 
-  Changes:
+  ## Changes Data:
   \`\`\`
-  ${groupedSummary}
+  ${data}
   \`\`\`
+
+  Important Instructions:
+  - Walkthrough should not be in points format and must be in paragraph format. 
+  - Do consider the priority of the changes/files and provide the walkthrough accordingly.
+  - Do not provide any reasoning why and how you are providing the walkthrough.
+  - You must given direct walkthrough in concise manner without any additional information.
+  - Do not mention that these changes affect the logic or functionality of the code in the walkthrough. You must only tell about the brief changes in the file by analysing the file difference summaries list.
 
   OutputStructure:
   \`\`\`
@@ -195,18 +208,24 @@ export class Prompts {
 `;
   };
 
-  categorizedSummary = (groupedSummary, prDescription, prTitle) => {
+  categorizedSummary = (data, prDescription, prTitle) => {
     return `
-  Categorize the changes into the following categories: Bug Fixes, New Features, Docs, Refactor etc.
+  Categorize the changes into the following categories: Bug Fixes, New Features, Docs, Refactor etc. for the new PR description in proper markdown format.
 
   PR Title: ${prTitle}
 
   PR Description: ${prDescription}
 
-  Changes:
+  Changes Data:
   \`\`\`
-  ${groupedSummary}
+  ${data}
   \`\`\`
+
+  Important:
+
+  - Return response in list and sublist form to tell about the type of changes in the pull request.
+  - Do not mention any particular file review , caution and potential issues in the categorized summary.
+  - You must only list in what aspect the changes has been made in the pull request.
 
   OutputStructure:
   \`\`\`

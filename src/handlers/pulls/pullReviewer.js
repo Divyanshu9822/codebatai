@@ -8,11 +8,10 @@ const pullReviewer = async (context) => {
   const repoName = context.payload.repository.name;
   const prDetails = context.payload.pull_request;
   const prTitle = prDetails.title;
-  let prDescription = prDetails.body;
+  const prDescription = prDetails.body;
 
   const reviewComments = [];
-  const commitsAndChangesSummaryMap = {};
-  const commitMessagesMap = {};
+  const prChangesData = {};
 
   const commitsResponse = await context.octokit.repos.compareCommits({
     owner: repoOwner,
@@ -23,26 +22,10 @@ const pullReviewer = async (context) => {
 
   const { commits, files: changedFiles } = commitsResponse.data;
 
-  for (const commit of commits) {
-    const commitMessage = commit.commit.message;
-    const commitUrl = commit.url;
-    const commitDetailsResponse = await context.octokit.request(`GET ${commitUrl}`);
-    const commitFiles = commitDetailsResponse.data.files;
-
-    for (const file of commitFiles) {
-      const filename = file.filename;
-
-      if (!commitMessagesMap[filename]) {
-        commitMessagesMap[filename] = [];
-      }
-
-      commitMessagesMap[filename].push(commitMessage);
-    }
-  }
-
   const prompts = new Prompts();
 
   for (const file of changedFiles) {
+    if (file.status === 'removed') continue; // Skip removed files
     const patches = file.patch.split('diff --git');
 
     for (const patch of patches) {
@@ -103,36 +86,55 @@ const pullReviewer = async (context) => {
           body: codeReview,
         });
 
-        if (!commitsAndChangesSummaryMap[file.filename]) {
-          commitsAndChangesSummaryMap[file.filename] = {
-            linked_commit_messages: [],
-            summaries: [],
+        if (!prChangesData[file.filename]) {
+          prChangesData[file.filename] = {
+            file_diff_summaries: [],
           };
         }
 
-        commitsAndChangesSummaryMap[file.filename].linked_commit_messages = commitMessagesMap[file.filename] || [];
-        commitsAndChangesSummaryMap[file.filename].summaries.push(fileSummary);
+        prChangesData[file.filename].file_diff_summaries.push(fileSummary);
       }
     }
   }
 
-  const groupedSummaryPrompt = prompts.summarizeChangesets(commitsAndChangesSummaryMap, prDescription, prTitle);
-  const groupedSummaryMessages = [
-    {
-      role: 'system',
-      content:
-        'You are an AI capable of grouping and summarizing changesets. Group related changes and remove duplicates. Provide the summary within the <groupedSummary> tag.',
-    },
-    {
-      role: 'user',
-      content: groupedSummaryPrompt,
-    },
-  ];
+  for (const file in prChangesData) {
+    const file_diff_summaries = prChangesData[file].file_diff_summaries;
 
-  const groupedSummaryResponse = await generateChatCompletion(groupedSummaryMessages);
-  const { groupedSummary } = extractFieldsWithTags(groupedSummaryResponse, ['groupedSummary']);
+    const groupedSummaryPrompt = prompts.summarizeChangesets(file, file_diff_summaries);
+    const groupedSummaryMessages = [
+      {
+        role: 'system',
+        content:
+          'You are an AI capable of grouping and summarizing changesets. Group related changes and remove duplicates. Provide the summary within the <groupedSummary> tag.',
+      },
+      {
+        role: 'user',
+        content: groupedSummaryPrompt,
+      },
+    ];
 
-  const walkthroughPrompt = prompts.walkthroughOfChanges(groupedSummary);
+    const groupedSummaryResponse = await generateChatCompletion(groupedSummaryMessages);
+    const { groupedSummary } = extractFieldsWithTags(groupedSummaryResponse, ['groupedSummary']);
+
+    if (!prChangesData[file].hasOwnProperty('changes_summary')) {
+      prChangesData[file].changes_summary = '';
+    }
+
+    prChangesData[file].changes_summary = groupedSummary;
+  }
+
+  const formatChangesMap = (prChangesData) => {
+    return Object.entries(prChangesData)
+      .map(
+        ([filename, { changes_summary }]) => `**Filename:** \`${filename}\`\n**Changes Summary:** ${changes_summary}`
+      )
+      .join('\n\n');
+  };
+
+  const formattedChangesData = formatChangesMap(prChangesData);
+
+  const walkthroughPrompt = prompts.walkthroughOfChanges(formattedChangesData);
+
   const walkthroughMessages = [
     {
       role: 'system',
@@ -148,12 +150,12 @@ const pullReviewer = async (context) => {
   const walkthroughResponse = await generateChatCompletion(walkthroughMessages);
   const { walkthrough } = extractFieldsWithTags(walkthroughResponse, ['walkthrough']);
 
-  const categorizedSummaryPrompt = prompts.categorizedSummary(groupedSummary, prDescription, prTitle);
+  const categorizedSummaryPrompt = prompts.categorizedSummary(formattedChangesData, prDescription, prTitle);
   const categorizedSummaryMessages = [
     {
       role: 'system',
       content:
-        'You are an AI capable of categorizing and summarizing changes. Categorize the changes into aspects such as Bug Fixes, New Features, etc for pull request Description. Provide the categorized summary within the <summary> tag.',
+        'You are an AI capable of categorizing changes. Categorize the changes into aspects such as Bug Fixes, New Features, etc for pull request Description. Provide the categorized summary within the <summary> tag.',
     },
     {
       role: 'user',
@@ -164,8 +166,8 @@ const pullReviewer = async (context) => {
   const categorizedSummaryResponse = await generateChatCompletion(categorizedSummaryMessages);
   const { summary } = extractFieldsWithTags(categorizedSummaryResponse, ['summary']);
 
-  const changesEntries = Object.entries(commitsAndChangesSummaryMap)
-    .map(([filename, { summaries }]) => `| \`${filename}\` | ${summaries.join(' ')} |`)
+  const changesEntries = Object.entries(prChangesData)
+    .map(([filename, { changes_summary }]) => `| \`${filename}\` | ${changes_summary} |`)
     .join('\n');
 
   const walkthroughAndSummaryCommentContent = `
@@ -205,8 +207,7 @@ ${changesEntries}
   }
 
   const updatedDescription = `
-${prDescription}
----
+${prDescription ? `${prDescription}\n---\n` : ''}
 ## Summary by CodeBat AI
 
 ${summary}
